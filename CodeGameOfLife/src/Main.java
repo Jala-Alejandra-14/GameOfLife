@@ -1,6 +1,17 @@
-public class Main {
-    public static void main(String[] args) {
+import java.util.concurrent.TimeUnit;
 
+public class Main {
+
+    private static int MAX_SCREEN_MOVEMENT;
+    private static int SPEED;
+
+    private static int WIDTH;
+
+    private static int LENGTH;
+
+    private static int[][] GENERATION;
+
+    public static void main(String[] args){
         try {
             String inPut = args[0];
             String[] firstInPut = inPut.split("=");
@@ -26,77 +37,138 @@ public class Main {
             String[] fifthInPut = inPut.split("=");
             String generationOne = fifthInPut[1];
 
-            if(checkTheRangesWidth(numberWidth) && checkTheRangesLength(numberLength) && checkTheRangesNumberGenerations(numberNumberOfGenerations) && checkTheRangesSpeed(numberSpeed)){
-                if(generationOne.equals("rnd")){
-                    fillGeneration(numberWidth,numberLength);
-                } else{
-                    //Cehcar que este correcto el formato
-                    checkStructure(generationOne);
-                    //Pasarlo a una matriz
-                    //Llenar los espacios faltantes 0
-                    //Mostrarlo
-                }
-            }else{
-                System.out.println("Incorrect and/or insufficient values");
-            }
+            validation(numberWidth,numberLength,numberNumberOfGenerations,numberSpeed,generationOne );
 
         } catch (ArrayIndexOutOfBoundsException e) {
             System.out.println("Incorrect and/or insufficient values");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public static boolean checkTheRangesWidth(int widthNumber){
-        if(widthNumber==10 || widthNumber==20 || widthNumber== 40 || widthNumber== 80){
-            return true;
-        }else{
-            return false;
-        }
-    }
-    public static boolean checkTheRangesLength(int lengthNumber){
-        if(lengthNumber ==10 || lengthNumber ==20 || lengthNumber == 40){
-            return true;
-        }else{
-            return false;
-        }
-    }
-    public static boolean checkTheRangesNumberGenerations(int numberOfGenerations){
-        if(numberOfGenerations>= 1){
-            return true;
-        }else{
-            return false;
-        }
-    }
+    public static void validation(int numberWidth, int numberLength, int numberNumberOfGenerations, int numberSpeed,String generationOne) throws InterruptedException {
+        if(validateData(numberWidth,numberLength,numberNumberOfGenerations,numberSpeed)){
 
-    public static boolean checkTheRangesSpeed(int numberSpeed){
-        if(numberSpeed>= 250 && numberSpeed<= 1000){
-            return true;
-        }else{
-            return false;
-        }
-    }
+            MAX_SCREEN_MOVEMENT = numberNumberOfGenerations;
+            SPEED = numberSpeed;
+            WIDTH = numberWidth;
+            LENGTH = numberLength;
 
-    public static void checkStructure(String generation){
+            if(generationOne.equals("rnd")){
+                GENERATION = fillGeneration(numberWidth,numberLength);
+                nextGeneration();
 
-    }
+            } else{
 
-    public static void fillGeneration(int width, int length){
-        String [][] generationOne = new String[length][width];
-        for (int row=0; row < generationOne.length; row++) {
-            for (int column=0; column < generationOne[row].length; column++) {
-                int numberRandom = (int) (Math.random()*(-2)+(2));
-                generationOne[row][column] = String.valueOf(numberRandom);
             }
+        }else{
+            System.out.println("Incorrect and/or insufficient values");
+            System.exit(0);
         }
-        showBoard(generationOne);
     }
-    public static void showBoard(String [][] board) {
-        for (int x=0; x < board.length; x++) {
+    public static void nextGeneration() throws InterruptedException {
+        int repetitions = 1;
+        int[][] nextGeneration = new int[LENGTH][WIDTH];
+
+        while (repetitions <= MAX_SCREEN_MOVEMENT) {
+            for (int x = 0; x < LENGTH; x++) {
+                for (int y = 0; y < WIDTH; y++) {
+                    int aliveNeighbour = 0;
+                    for (int i = -1; i <= 1; i++){
+                        for (int j = -1; j <= 1; j++){
+                            if ((x + i >= 0 && x + i < LENGTH) && (y + j >= 0 && y + j < WIDTH)){
+                                aliveNeighbour += GENERATION[x + i][y + j];
+                            }
+                        }
+                    }
+                    aliveNeighbour -= GENERATION[x][y];
+
+                    if ((GENERATION[x][y] == 1) && (aliveNeighbour < 2)) { //Rule 01
+                        nextGeneration[x][y] = 0;
+                    } else if ((GENERATION[x][y] == 1) && (aliveNeighbour > 3)) { //Rule 02
+                        nextGeneration[x][y] = 0;
+                    } else if ((GENERATION[x][y] == 1) && ((aliveNeighbour == 2) || (aliveNeighbour == 3))) { //Rule 03
+                        nextGeneration[x][y] = 1;
+                    } else if((GENERATION[x][y] == 0) && (aliveNeighbour == 3)) { //Rule 04
+                        nextGeneration[x][y] = 1;
+                    }else{
+                        nextGeneration[x][y] = GENERATION[x][y];
+                    }
+                }
+            }
+            nextGeneration = GENERATION;
+            showBoardNews(nextGeneration, repetitions);
+            repetitions += 1;
+            TimeUnit.MILLISECONDS.sleep(SPEED);
+            cleanScreenSimulation();
+        }
+    }
+    public static void cleanScreenSimulation() throws InterruptedException {
+        final int SCROLLBAR_SPEED = 1000 / 850;
+        for (int i = 0; i < MAX_SCREEN_MOVEMENT; i++) {
+            System.out.println();
+            TimeUnit.MILLISECONDS.sleep(SCROLLBAR_SPEED);
+        }
+    }
+
+    public static void showBoardNews(int [][] board, int num) {
+        System.out.println("Generation number : " + num);
+
+        for (int x = 0; x < board.length; x++) {
             System.out.print("|");
             for (int y=0; y < board[x].length; y++) {
-                System.out.print (board[x][y]);
+                if (board[x][y] == 0)
+                    System.out.print("⬜");
+                else
+                    System.out.print("⬛");
                 if (y!=board[x].length-1) System.out.print("\t");
             }
             System.out.println("|");
         }
+    }
+
+    public static void showBoard(int [][] board) {
+        System.out.println("First Generation");
+        for (int x = 0; x < board.length; x++) {
+            System.out.print("|");
+            for (int y=0; y < board[x].length; y++) {
+                if (board[x][y] == 0)
+                    System.out.print("⬜");
+                else
+                    System.out.print("⬛");
+                if (y!=board[x].length-1) System.out.print("\t");
+            }
+            System.out.println("|");
+        }
+    }
+
+    public static int[][] fillGeneration(int width, int length){
+        int [][] generationOne = new int[length][width];
+        for (int row=0; row < generationOne.length; row++) {
+            for (int column=0; column < generationOne[row].length; column++) {
+                int numberRandom = (int) (Math.random()*(-2)+(2));
+                generationOne[row][column] =numberRandom;
+            }
+        }
+        showBoard(generationOne);
+        return generationOne;
+    }
+    public static boolean validateData(int numberWidth,int numberLength, int numberNumberOfGenerations, int numberSpeed){
+        return checkTheRangesWidth(numberWidth) &&
+                checkTheRangesLength(numberLength) &&
+                checkTheRangesNumberGenerations(numberNumberOfGenerations) &&
+                checkTheRangesSpeed(numberSpeed);
+    }
+    public static boolean checkTheRangesWidth(int widthNumber){
+        return widthNumber == 10 || widthNumber == 20 || widthNumber == 40 || widthNumber == 80;
+    }
+    public static boolean checkTheRangesLength(int lengthNumber){
+        return lengthNumber == 10 || lengthNumber == 20 || lengthNumber == 40;
+    }
+    public static boolean checkTheRangesNumberGenerations(int numberOfGenerations){
+        return numberOfGenerations >= 1;
+    }
+    public static boolean checkTheRangesSpeed(int numberSpeed){
+        return numberSpeed >= 250 && numberSpeed <= 1000;
     }
 }
