@@ -59,13 +59,31 @@ public class Main {
                 nextGeneration();
 
             } else{
-
+                GENERATION = goToMatrix(generationOne);
+                nextGeneration();
             }
         }else{
             System.out.println("Incorrect and/or insufficient values");
             System.exit(0);
         }
     }
+
+    public static int[][] goToMatrix(String generation){
+        String[] sections = generation.split("#");
+        int [][] generatedMatrix = new int[LENGTH][WIDTH];
+
+        for (int i = 0; i < sections.length; i++) {
+            String aux = sections[i];
+            for (int x = 0; x < aux.length(); x++) {
+                String value = String.valueOf(aux.charAt(x));
+                int number = Integer.parseInt(value);
+                generatedMatrix[i][x]=number;
+            }
+        }
+        showBoard(generatedMatrix);
+        return generatedMatrix;
+    }
+
     public static void nextGeneration() throws InterruptedException {
         int repetitions = 1;
         int[][] nextGeneration = new int[LENGTH][WIDTH];
